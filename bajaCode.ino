@@ -1,17 +1,20 @@
-// BAJA TEST CODE REV. 7: 11/MAR/2020
-// CONTAINS GPS, SD, AND LCD TEST CODE
-// Testing LCDs - Juan 11MAR
+// BAJA TEST CODE REV. 8: 26/APR/2020
+// CONTAINS GPS, SD, LCD, and GasLevel code
+// Fixed Verify ; Juan APR26
 #define gpsPort Serial1
 #define GPS_PORT_NAME "Serial1"
 #define DEBUG_PORT Serial
 
 // LIBRARY INCLUSION
+#include <SD.h>
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
-#include <SD.h>
 #include <NMEAGPS.h>
 
 // INITIALIZING VARIABLES
+//Fuel Pins
+ int upfuel = 30;//pin for top fuel tank
+ int bottomfuel = 31;//pin for bottom fuel tank
 
 //    GPS Variables
 const int gpsBaud = 9600;
@@ -24,6 +27,7 @@ File dataFile;
 //    LCD Variables
 LiquidCrystal_I2C lcd1 = LiquidCrystal_I2C(0x27, 16, 2);
 LiquidCrystal_I2C lcd2 = LiquidCrystal_I2C(0x26, 16, 2); // CHANGE PORT FOR SECOND LCD
+uint8_t testChar[8] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff}; // Custom char
 
 // SETUP
 void setup() {
@@ -41,10 +45,10 @@ void setup() {
     dataFile.println("FixIndex, Latitude, Longitude, Speed, Heading, DDMMYYYYHHMMSS");
     dataFile.close();
     DEBUG_PORT.println("Done!");
-  } else {
+  } 
+  else {
     DEBUG_PORT.println("Error opening file!");
   }
-
   // GPS SETUP
   gpsPort.begin(gpsBaud);
   // LCD SETUP
@@ -59,6 +63,7 @@ void setup() {
   DEBUG_PORT.print("Should have printed!");
   lcd1.clear();
   lcd2.clear();
+
 }
 
 //  FUNCTIONS
@@ -92,7 +97,7 @@ void GPSWrite() {
     }
 
     if (fix.valid.date) {
-      dataFile.print(','));
+      dataFile.print(',');
       dataFile.print(fix.dateTime.day); dataFile.print(fix.dateTime.month); dataFile.print(fix.dateTime.year); 
       dataFile.print(fix.dateTime.hours); dataFile.print(fix.dateTime.minutes); dataFile.println(fix.dateTime.seconds); 
       lcd1.setCursor(0,1);  lcd1.print("TIME: ");
@@ -107,12 +112,37 @@ void GPSWrite() {
   }
 }
 
+void gasDisplay() {
+  if (upfuel == HIGH && bottomfuel == LOW) {
+    lcd2.setCursor(0,0);  
+    lcd2.print(1);
+    lcd2.setCursor(1,0); 
+    lcd2.print(1);
+    lcd2.setCursor(2,0); 
+    lcd2.print(1);
+  }
+
+  if (upfuel == LOW && bottomfuel == HIGH) {// when gas tank is around half full(between 1/3 abd 2/3 - bottom mag on top off)   
+    lcd2.setCursor(0,0); 
+    lcd2.print(1);
+  }
+
+  if (upfuel == HIGH && bottomfuel == LOW) {//When gas tank is near empty(between 0/3 and 2/3 - both mag sensors off)
+    lcd2.setCursor(0,0); 
+    lcd2.blink();
+    // delay(3000);
+  }
+}
+
 //  LOOP: MAIN FUNCTIONS
 
 void loop() {
   GPSWrite();
+  /* SD TEST CODE
   dataFile = SD.open("newFile.txt", FILE_WRITE);
   dataFile.println(millis());
-  dataFile.close();
+  dataFile.close(); 
+  */
+  gasDisplay();
   delay(10);
 }
