@@ -1,6 +1,6 @@
-// BAJA TEST CODE REV. 8: 26/APR/2020
+// BAJA TEST CODE REV. 9: 12/MAY/2020
 // CONTAINS GPS, SD, LCD, and GasLevel code
-// Fixed Verify ; Juan APR26
+// Sent by Ozan - May 12th
 #define gpsPort Serial1
 #define GPS_PORT_NAME "Serial1"
 #define DEBUG_PORT Serial
@@ -13,8 +13,10 @@
 
 // INITIALIZING VARIABLES
 //Fuel Pins
- int upfuel = 30;//pin for top fuel tank
- int bottomfuel = 31;//pin for bottom fuel tank
+int upfuel = 22;//pin for top fuel tank
+int bottomfuel = 23;//pin for bottom fuel tank
+bool lastUp = false;
+bool lastBottom = false;
 
 //    GPS Variables
 const int gpsBaud = 9600;
@@ -57,19 +59,21 @@ void setup() {
   lcd1.setCursor(2,0);  lcd1.print("ROUGH RIDER");
   lcd1.setCursor(5,1);  lcd1.print("HUD 1");
   lcd2.init();
+  lcd2.createChar(1, testChar);
   lcd2.backlight();
   lcd2.setCursor(2,0);  lcd2.print("ROUGH RIDER");
   lcd2.setCursor(5,1);  lcd2.print("HUD 2");
   DEBUG_PORT.print("Should have printed!");
   lcd1.clear();
   lcd2.clear();
-
+  // GAS SETUP
+  pinMode(upfuel, INPUT);
+  pinMode(bottomfuel, INPUT);
 }
 
 //  FUNCTIONS
 
 //    GPSWrite: Writes GPS data to sd card and outputs relevant data to LCD monitors
-
 void GPSWrite() {
   int i = 0;
   while (gps.available(gpsPort)) {
@@ -113,27 +117,65 @@ void GPSWrite() {
 }
 
 void gasDisplay() {
-  if (upfuel == HIGH && bottomfuel == LOW) {
-    lcd2.setCursor(0,0);  
-    lcd2.print(1);
-    lcd2.setCursor(1,0); 
-    lcd2.print(1);
-    lcd2.setCursor(2,0); 
-    lcd2.print(1);
-  }
+ //if (digitalRead(upfuel) != lastUp || digitalRead(bottomfuel) != lastBottom) {
+    if (digitalRead(upfuel) == LOW && digitalRead(bottomfuel) == LOW) {
+     lcd2.setCursor(0,0); 
+     lcd2.write(1);
+     lcd2.setCursor(1,0); 
+     lcd2.write(1);
+     lcd2.setCursor(2,0); 
+     lcd2.write(1);
+     lcd2.setCursor(3,0); 
+     lcd2.write(1);
+     lcd2.setCursor(4,0); 
+     lcd2.write(1);
+     lcd2.setCursor(5,0); 
+     lcd2.write(1);
+     delay(500);
+     lcd2.clear();
+      /*lcd2.setCursor(0,0);
+      lcd2.print(">66%");
+      delay(500);
+      lcd2.clear();*/
+      
+    }
 
-  if (upfuel == LOW && bottomfuel == HIGH) {// when gas tank is around half full(between 1/3 abd 2/3 - bottom mag on top off)   
-    lcd2.setCursor(0,0); 
-    lcd2.print(1);
-  }
+    if (digitalRead(upfuel) == LOW && digitalRead(bottomfuel) == HIGH) {// when gas tank is around half full(between 1/3 abd 2/3 - bottom mag on top off)   
+     lcd2.setCursor(0,0); 
+     lcd2.write(1);
+     lcd2.setCursor(1,0); 
+     lcd2.write(1);
+     lcd2.setCursor(2,0); 
+     lcd2.write(1);
+     lcd2.setCursor(3,0); 
+     lcd2.write(1);
+     delay(500);
+     lcd2.clear();
+      /*lcd2.setCursor(0,0);
+      lcd2.print(">35%");
+      delay(500);
+      lcd2.clear();*/
+    }
 
-  if (upfuel == HIGH && bottomfuel == LOW) {//When gas tank is near empty(between 0/3 and 2/3 - both mag sensors off)
-    lcd2.setCursor(0,0); 
-    lcd2.blink();
-    // delay(3000);
-  }
+    if (digitalRead(upfuel) == HIGH && digitalRead(bottomfuel) == HIGH)   {//When gas tank is near empty(between 0/3 and 2/3 - both mag sensors off)
+     lcd2.setCursor(0,0); 
+     lcd2.write(1);
+     lcd2.setCursor(1,0); 
+     lcd2.write(1);
+     lcd2.setCursor(0,1); 
+     lcd2.print("GAS UP BUTTERCUP"); 
+     delay(500);
+     lcd2.clear();
+      /*lcd2.print("REFUEL! 1/3 LEFT");     
+      delay(500);
+      lcd2.clear();*/
+    }
+    DEBUG_PORT.print(digitalRead(upfuel));
+    DEBUG_PORT.println(digitalRead(bottomfuel));
+  //lastUp = digitalRead(upfuel);
+  //lastBottom = digitalRead(bottomfuel);
+  //}
 }
-
 //  LOOP: MAIN FUNCTIONS
 
 void loop() {
