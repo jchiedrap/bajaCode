@@ -4,10 +4,15 @@
             "name": "Win32",
             "includePath": [
                 "D:\\Installs\\Arduino\\tools\\**",
-                "D:\\Installs\\Arduino\\hardware\\arduino\\avr\\**"
+                "D:\\Installs\\Arduino\\hardware\\arduino\\avr\\**",
+                "D:\\DOCUMENTS\\Arduino\\libraries\\**",
+                "C:\\Program Files (x86)\\Arduino\\**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
+                "C:\\Program Files (x86)\\Arduino\\tools\\**"
             ],
             "forcedInclude": [
-                "D:\\Installs\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
+                "D:\\Installs\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\**"
             ],
             "intelliSenseMode": "msvc-x64",
             "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.25.28610/bin/Hostx64/x64/cl.exe",
