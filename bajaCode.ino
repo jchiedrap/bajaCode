@@ -1,6 +1,6 @@
-// BAJA TEST CODE REV. 9: 12/MAY/2020
+// BAJA TEST CODE REV. 10: 28/12/2020
 // CONTAINS GPS, SD, LCD, and GasLevel code
-// Sent by Ozan - May 12th
+// Updates code to be in the system of "Gather, Display, Store". Further documentation found above each section. -Juan
 #define gpsPort Serial1
 #define GPS_PORT_NAME "Serial1"
 #define DEBUG_PORT Serial
@@ -13,9 +13,13 @@
 
 // INITIALIZING VARIABLES
 
+//  Debug Variables
+int ledSD = 42; int ledGPS = 44; int ledFinishedSetup = 46;
+bool bledSD, bledGPS, bledFinishedSetup;
+
 //  Fuel Pins
-int upfuel = 22;//pin for top fuel tank
-int bottomfuel = 23;//pin for bottom fuel tank
+int upfuel = 12; //pin for top fuel tank
+int bottomfuel = 13; //pin for bottom fuel tank
 bool lastUp = false;
 bool lastBottom = false;
 
@@ -24,37 +28,50 @@ int rpmMode = 1; // 1 = IR, 0 = Ind.
 int rpmPin = A0; // temp
 int rpmPinIR = 2;
 int rpmCounter = 0;
+int rpmDebug = -1;
 unsigned long periodRpm = 0;
 
 //    GPS Variables
 const int gpsBaud = 9600;
 NMEAGPS gps;
 gps_fix fix;
+double lat, lon, spd, hed;
+int dd, mo, yyyy, hh, mi , ss;
 
 //    SD Variables
 File dataFile;
 
 //    LCD Variables
 LiquidCrystal_I2C lcd1 = LiquidCrystal_I2C(0x27, 16, 2);
-LiquidCrystal_I2C lcd2 = LiquidCrystal_I2C(0x26, 16, 2); // CHANGE PORT FOR SECOND LCD
+LiquidCrystal_I2C lcd2 = LiquidCrystal_I2C(0x26, 16, 2);
 uint8_t testChar[8] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff}; // Custom char
 
 //    Output Data Variables
-String colNames = "Ind,RPM,Gas,Lat,Lon,Spd,Head,DMYHMS";
+String colNames = "Index,RPM,Gas,Latitude,Longitude,Speed,Heading,DDMMYYYYHHMMSS";
 unsigned int i = 0;
 
 //    dataOut Struct
-
-struct DataBlip
-{
-  int gas;
-  double rpm;
-  gps_fix currFix;
-};
+int gas;
+double rpm;
+gps_fix currFix;
 
 
 // SETUP
 void setup() {
+
+  // DEBUG LEDS SETUP
+  pinMode(ledGPS, OUTPUT);
+  pinMode(ledSD, OUTPUT);
+  pinMode(ledFinishedSetup, OUTPUT);
+
+  digitalWrite(ledGPS, HIGH);
+  digitalWrite(ledSD, HIGH);
+
+  delay(300);
+
+  digitalWrite(ledGPS, LOW);
+  digitalWrite(ledSD, LOW);
+  bledGPS = bledSD = false;
 
   // SD CARD SETUP
   DEBUG_PORT.begin(9600);
@@ -63,18 +80,25 @@ void setup() {
   } else {
     DEBUG_PORT.println("SD works!");
   }
+
   dataFile = SD.open("dataFile.txt", FILE_WRITE);
   if (dataFile) {
     DEBUG_PORT.println("Writing!");
     dataFile.println(colNames);
     dataFile.close();
     DEBUG_PORT.println("Done!");
+    bledSD = true;
+    digitalWrite(ledSD, HIGH);
   } 
   else {
     DEBUG_PORT.println("Error opening file!");
   }
+
   // GPS SETUP
   gpsPort.begin(gpsBaud);
+  bledGPS = true;
+  digitalWrite(ledGPS, HIGH);
+
   // LCD SETUP
   lcd1.init();
   lcd1.backlight();
@@ -88,14 +112,28 @@ void setup() {
   DEBUG_PORT.print("Should have printed!");
   lcd1.clear();
   lcd2.clear();
+
   // GAS SETUP
-  pinMode(upfuel, INPUT);
-  pinMode(bottomfuel, INPUT);
+  pinMode(upfuel, INPUT_PULLUP);
+  pinMode(bottomfuel, INPUT_PULLUP);
+
   // RPM SETUP 
   if (rpmMode == 1) {
     pinMode(rpmPinIR, INPUT_PULLUP);
   } else {
     pinMode(rpmPin, INPUT);
+  }
+
+  // FINALIZED DEBUG LEDS
+
+  if (bledGPS && bledSD) {
+    bledFinishedSetup = true;
+    bledGPS = bledSD = false;
+    digitalWrite(ledGPS, LOW);
+    digitalWrite(ledSD, LOW);
+    digitalWrite(ledFinishedSetup, HIGH);
+    delay(300);
+    digitalWrite(ledFinishedSetup, LOW);
   }
 
 }
@@ -104,101 +142,162 @@ void setup() {
 
 //  DATA FUNCTIONS:
 
-void gatherData(DataBlip d) {
+void gatherData() {
   // gather fuel
-  if (digitalRead(upfuel) == LOW) { // if the top one is floating
-    d.gas = (digitalRead(bottomfuel) == LOW) ? 2 : -1;
-  } else {
-    d.gas = (digitalRead(bottomfuel) == LOW) ? 1 : 0;
-  }
+  bool top, bot = false;
+  top = digitalRead(upfuel);
+  bot = digitalRead(bottomfuel);
+
+  if (top == 1 and bot == 1) gas = 2;
+  else if (top == 0 and bot == 1) gas = -1;
+  else if ((top == 1 and bot == 0)) gas = 1;
+  else gas = 0;
 
   // gather GPS
-  while (gps.available(gpsPort)) d.currFix = gps.read();
+  while (gps.available(gpsPort)) {
+    digitalWrite(ledGPS, HIGH);
+    currFix = gps.read();
+  }
+  lat = (double)currFix.latitudeL()*1e-7f;
+  lon = (double)currFix.longitudeL()*1e-7f;
+  spd = round(currFix.speed_kph()*100.00f)/100.0f;
+  hed = currFix.heading();
+  dd = currFix.dateTime.date; mo = currFix.dateTime.month; yyyy = currFix.dateTime.year;
+  hh = currFix.dateTime.hours; mi = currFix.dateTime.minutes; ss = currFix.dateTime.seconds;
+  digitalWrite(ledGPS, LOW);
 
   // gather RPM
   if (rpmMode == 1) {
-    d.rpm = (i > 0) ? ((rpmCounter * 1e6) / (periodRpm)) : 0;
+    if (i > 0) {
+      rpm = rpmCounter * 1e6 / periodRpm;
+    } else rpm = 0;
   } else {
     // TODO: write code for Inductor test
   }
 }
 
-void displayData(DataBlip d) {
+void displayData() {
   // display fuel
-  switch (d.gas) {
+  lcd1.clear(); lcd2.clear();
+  switch (gas) {
     case -1: 
       lcd2.setCursor(0, 0); lcd2.print("ERROR");
       break;
     case 0: 
-      lcd2.setCursor(0, 0); lcd2.blink();
+      lcd2.setCursor(0, 0); 
       lcd2.setCursor(0, 1); lcd2.print("GAS UP BUTTERCUP");
       break;
-    default:
-      for (int i = 0; i < d.gas*2; i++) {
+    case 1: 
+      for (int i = 0; i < 2; i++) {
         lcd2.setCursor(i, 0); lcd2.write(1);
       }
       break;
+    case 2: 
+      for (int i = 0; i < 4; i++) {
+        lcd2.setCursor(i, 0); lcd2.write(1);
+      }
+      break;
+    default: break;
   }
 
   // display gps data
     // display speed
-  if (d.currFix.valid.speed) {
+  if (currFix.valid.speed) {
     lcd1.setCursor(0,0); lcd1.print("SPEED: ");
-    lcd1.setCursor(7,0); lcd1.print(round(d.currFix.speed_kph()*100)/100);
+    lcd1.setCursor(7,0); lcd1.print(spd);
   } else {
     lcd1.setCursor(0,0); lcd1.print("SPEED: ");
     lcd1.setCursor(7,0); lcd1.print("N/A");
   }
     // display time
-  if (d.currFix.valid.date) {
+  if (currFix.valid.date) {
     lcd1.setCursor(0,1);  lcd1.print("TIME: ");
-    lcd1.setCursor(6,1);  lcd1.print(d.currFix.dateTime.hours); 
+    lcd1.setCursor(6,1);  lcd1.print(hh); 
     lcd1.setCursor(8,1);  lcd1.print(":");
-    lcd1.setCursor(9,1);  lcd1.print(d.currFix.dateTime.minutes); 
+    lcd1.setCursor(9,1);  lcd1.print(mi); 
     lcd1.setCursor(11,1); lcd1.print(":");
-    lcd1.setCursor(12,1); lcd1.print(d.currFix.dateTime.seconds); 
+    lcd1.setCursor(12,1); lcd1.print(ss); 
   } else {
     lcd1.setCursor(0,1);  lcd1.print("TIME: ");
     lcd1.setCursor(6,1);  lcd1.print("N/A"); 
   }
 
   // display RPM
-  lcd2.setCursor(6, 1); lcd2.print("RPM: ");
-  lcd2.setCursor(11, 1); lcd2.print((int) d.rpm);
+  lcd2.setCursor(6, 0); lcd2.print("RPM: ");
+  lcd2.setCursor(11, 0); lcd2.print((int) rpm);
 }
 
-void storeData(DataBlip d) {
+void storeData() {
+
+  // Activate dataFile
+
+  digitalWrite(ledSD, HIGH);
   dataFile = SD.open("dataFile.txt", FILE_WRITE);
-  String blip = "";
 
-  blip += i; blip += ",";
+  if (dataFile) { // Ensure the file is available before writing to it
+    // Write index
+    dataFile.print(i); dataFile.print(",");
 
-  blip += d.rpm; blip += ",";
-  blip += d.gas; blip += ",";
+    // Write RPM and Gas
 
-  if (d.currFix.valid.location) {
-    blip += round(d.currFix.latitude()*1000000)/1000000; blip += ",";
-    blip += round(d.currFix.longitude()*1000000)/1000000; blip += ",";
-    blip += round(d.currFix.speed_kph()*100)/100; blip += ",";
-    blip += d.currFix.heading(); blip += ",";
-  } else {
-    for (int j = 0; j < 4; j++) {
-      blip += "ERROR"; blip += ",";
-    }
+    dataFile.print(rpm); dataFile.print(",");
+    dataFile.print(gas); dataFile.print(",");
+
+    // Write location, speed, and heading
+
+    dataFile.print(lat); dataFile.print(",");
+    dataFile.print(lon); dataFile.print(",");
+    dataFile.print(spd); dataFile.print(",");
+    dataFile.print(hed); dataFile.print(",");
+
+    // Write datetime
+
+    dataFile.print(dd); dataFile.print(mo); dataFile.print(yyyy); 
+    dataFile.print(hh); dataFile.print(mi); dataFile.print(ss);
+
+    // Close dataFile to save
+
+    dataFile.print("\n");
+    dataFile.close();
+    i++;
   }
-
-  if (d.currFix.valid.date) {
-    blip += d.currFix.dateTime.day; blip += d.currFix.dateTime.month; blip += d.currFix.dateTime.year; 
-    blip += d.currFix.dateTime.hours; blip += d.currFix.dateTime.minutes; blip += d.currFix.dateTime.seconds;
-  } else {
-    blip += "ERROR";
-  }
-
-  dataFile.print(blip);
-  dataFile.close();
-
-  i++;
+  digitalWrite(ledSD, LOW);
 }
+
+
+//  rpmCount: [INTERRUPT] adds to rpmCounter every time the interrupt port is RISING
+void rpmCount() {
+  rpmCounter++;
+}
+
+//  LOOP: MAIN FUNCTIONS
+
+void loop() {
+  gatherData();
+  rpmCounter = 0;
+  attachInterrupt(digitalPinToInterrupt(rpmPinIR), rpmCount, RISING);
+  periodRpm = micros();
+  storeData();
+  if (i % 10 == 0) displayData(); // lower refresh rate to increase display stability
+  detachInterrupt(digitalPinToInterrupt(rpmPinIR));
+  periodRpm = micros() - periodRpm;
+  delay(10);
+
+  //// DEPRECATED
+
+  //GPSWrite();
+  /* SD TEST CODE
+  dataFile = SD.open("newFile.txt", FILE_WRITE);
+  dataFile.println(millis());
+  dataFile.close(); 
+  */
+  //gasDisplay();
+
+  ////
+}
+
+/* Deprecated Functions
+
 
 //    GPSWrite: Writes GPS data to sd card and outputs relevant data to LCD monitors
 void GPSWrite() {
@@ -261,10 +360,10 @@ void gasDisplay() {
      lcd2.write(1);
      delay(500);
      lcd2.clear();
-      /*lcd2.setCursor(0,0);
-      lcd2.print(">66%");
-      delay(500);
-      lcd2.clear();*/
+      //lcd2.setCursor(0,0);
+      //lcd2.print(">66%");
+      //delay(500);
+      //lcd2.clear();
       
     }
 
@@ -279,10 +378,10 @@ void gasDisplay() {
      lcd2.write(1);
      delay(500);
      lcd2.clear();
-      /*lcd2.setCursor(0,0);
-      lcd2.print(">35%");
-      delay(500);
-      lcd2.clear();*/
+      //lcd2.setCursor(0,0);
+      //lcd2.print(">35%");
+      //delay(500);
+      //lcd2.clear();
     }
 
     if (digitalRead(upfuel) == HIGH && digitalRead(bottomfuel) == HIGH)   {//When gas tank is near empty(between 0/3 and 2/3 - both mag sensors off)
@@ -294,9 +393,9 @@ void gasDisplay() {
      lcd2.print("GAS UP BUTTERCUP"); 
      delay(500);
      lcd2.clear();
-      /*lcd2.print("REFUEL! 1/3 LEFT");     
-      delay(500);
-      lcd2.clear();*/
+      //lcd2.print("REFUEL! 1/3 LEFT");     
+      //delay(500);
+      //lcd2.clear();
     }
     DEBUG_PORT.print(digitalRead(upfuel));
     DEBUG_PORT.println(digitalRead(bottomfuel));
@@ -305,33 +404,4 @@ void gasDisplay() {
   //}
 }
 
-//  rpmCount: [INTERRUPT] adds to rpmCounter every time the interrupt port is RISING
-void rpmCount() {
-  rpmCounter++;
-}
-
-//  rpmCalc: Calculate RPM
-void rpmCalc() {
-
-}
-
-//  LOOP: MAIN FUNCTIONS
-
-void loop() {
-  DataBlip data;
-  gatherData(data);
-  attachInterrupt(digitalPinToInterrupt(rpmPinIR), rpmCount, RISING);
-  periodRpm = micros();
-  displayData(data);
-  storeData(data);
-  detachInterrupt(digitalPinToInterrupt(rpmPinIR));
-  periodRpm = micros() - periodRpm;
-  //GPSWrite();
-  /* SD TEST CODE
-  dataFile = SD.open("newFile.txt", FILE_WRITE);
-  dataFile.println(millis());
-  dataFile.close(); 
-  */
-  //gasDisplay();
-  delay(10);
-}
+*/
