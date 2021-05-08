@@ -6,7 +6,6 @@ def turnToDf(filePath):
     return pd.read_csv(filePath)
 
 def colorPick (val, minVal, maxVal):
-    color = ''
     if val >= maxVal or val <= minVal:#Bounds are exclusive
         return '#FFFFFF' # out of bounds, return white 
     
