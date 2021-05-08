@@ -5,16 +5,6 @@ import os
 def turnToDf(filePath):
     return pd.read_csv(filePath)
 
-def mapDf(df, outName, variableToBeMeasured, minVal, maxVal):
-    outputName = '{}.html'.format(outName)
-    minLat, minLon, maxLat, maxLon = min(df['Latitude']), min(df['Longitude']), max(df['Latitude']), max(df['Longitude'])
-    #Approximate location of the course
-    mapPlot = gmplot.GoogleMapPlotter((minLat + (maxLat - minLat)/2), (minLon + (maxLon - minLon)/2), 10)
-    for index, row in df.iterrows():
-        mapPlot.plot(df.loc[index:index+1, 'Latitude'], df.loc[index:index+1, 'Longitude'], color = colorPick(df.loc[index,variableToBeMeasured], minVal, maxVal), edge_width=7)
-    mapPlot.draw(outputName)
-    os.system(outputName)
-    
 def colorPick (val, minVal, maxVal):
     color = ''
     if val >= maxVal or val <= minVal:#Bounds are exclusive
@@ -36,6 +26,16 @@ def colorPick (val, minVal, maxVal):
         color = ('#{:02x}{:02x}{:02x}'.format( 255, int(255*(1-gain)), 0))
    
     return color
+
+def mapDf(df, outName, variableToBeMeasured, minVal, maxVal):
+    outputName = '{}.html'.format(outName)
+    minLat, minLon, maxLat, maxLon = min(df['Latitude']), min(df['Longitude']), max(df['Latitude']), max(df['Longitude'])
+    #Approximate location of the course
+    mapPlot = gmplot.GoogleMapPlotter((minLat + (maxLat - minLat)/2), (minLon + (maxLon - minLon)/2), 10)
+    for index, row in df.iterrows():
+        mapPlot.plot(df.loc[index:index+1, 'Latitude'], df.loc[index:index+1, 'Longitude'], color = colorPick(df.loc[index,variableToBeMeasured], minVal, maxVal), edge_width=7)
+    mapPlot.draw(outputName)
+    os.system(outputName)
     
 def turnToExcel(df, outName):
     df.to_excel('{}.xlsx'.format(outName))
