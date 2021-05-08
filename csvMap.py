@@ -17,15 +17,15 @@ def colorPick (val, minVal, maxVal):
     
     #Colours in Order from lowest to highest: blue, cyan , green, yellow, red
     if interval == 0:
-        color = ('#{:02x}{:02x}{:02x}'.format( 0, int(255*gain) , 255 ))
+        red, green, blue = 0, int(255*gain), 255
     elif interval == 1:
-        color = ('#{:02x}{:02x}{:02x}'.format( 0, 255, int(255*(1-gain) )))
+        red, green, blue = 0, 255, int(255*(1-gain))
     elif interval == 2:
-        color = ('#{:02x}{:02x}{:02x}'.format( int(255*gain), 255, 0))
+        red, green, blue = int(255*gain), 255, 0
     elif interval == 3:
-        color = ('#{:02x}{:02x}{:02x}'.format( 255, int(255*(1-gain)), 0))
+        red, green, blue = 255, int(255*(1-gain)), 0
    
-    return color
+    return '#{:02x}{:02x}{:02x}'.format(red, green, blue)
 
 def mapDf(df, outName, variableToBeMeasured, minVal, maxVal):
     outputName = '{}.html'.format(outName)
