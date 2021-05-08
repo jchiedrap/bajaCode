@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from datetime import time
 #Finished Jan 6th 2020
-def plotData(path, quantity):
+def plotData(path: str, quantity: str):
 
     df = pd.read_csv(path) #Read the csv
 
