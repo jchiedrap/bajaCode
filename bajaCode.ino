@@ -10,6 +10,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
 #include <NMEAGPS.h>
+#include <string.h>
 
 // INITIALIZING VARIABLES
 
@@ -158,9 +159,9 @@ void gatherData() {
     digitalWrite(ledGPS, HIGH);
     currFix = gps.read();
   }
-  lat = (double)currFix.latitudeL()*1e-7f;
-  lon = (double)currFix.longitudeL()*1e-7f;
-  spd = round(currFix.speed_kph()*100.00f)/100.0f;
+  lat = (double) currFix.latitudeL()*1e-7d;
+  lon = (double) currFix.longitudeL()*1e-7d;
+  spd = round(currFix.speed_kph()*100.00d)/100.00d;
   hed = currFix.heading();
   dd = currFix.dateTime.date; mo = currFix.dateTime.month; yyyy = currFix.dateTime.year;
   hh = currFix.dateTime.hours; mi = currFix.dateTime.minutes; ss = currFix.dateTime.seconds;
@@ -245,8 +246,10 @@ void storeData() {
 
     // Write location, speed, and heading
 
-    dataFile.print(lat); dataFile.print(",");
-    dataFile.print(lon); dataFile.print(",");
+    dataFile.print(String(lat, 6)); dataFile.print(",");
+    dataFile.print(String(lon, 6)); dataFile.print(",");
+    Serial.println(String(lat, 6));
+    Serial.println(String(lon, 6));
     dataFile.print(spd); dataFile.print(",");
     dataFile.print(hed); dataFile.print(",");
 
@@ -278,7 +281,7 @@ void loop() {
   attachInterrupt(digitalPinToInterrupt(rpmPinIR), rpmCount, RISING);
   periodRpm = micros();
   storeData();
-  if (i % 10 == 0) displayData(); // lower refresh rate to increase display stability
+  if (i % 5 == 0) displayData(); // lower refresh rate to increase display stability
   detachInterrupt(digitalPinToInterrupt(rpmPinIR));
   periodRpm = micros() - periodRpm;
   delay(10);
