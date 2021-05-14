@@ -31,7 +31,6 @@ def colorPick (val: float, minVal: float, maxVal: float):
 
 def mapDf(df: DataFrame, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float):
     outputName = '{}.html'.format(outName)
-    print(df['Latitude'])
     minLat, minLon, maxLat, maxLon = min([x for x in df['Latitude'] if x != 0.0]), min([x for x in df['Longitude'] if x != 0.0]), max([x for x in df['Latitude'] if x != 0.0]), max([x for x in df['Longitude'] if x != 0.0])
     #Approximate location of the course
     mapPlot = gmplot.GoogleMapPlotter((minLat + (maxLat - minLat)/2), (minLon + (maxLon - minLon)/2), 18)
