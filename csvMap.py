@@ -1,10 +1,7 @@
 import pandas as pd
-import numpy
-import gmplot
-import os
-
+import gmplot, os, subprocess
 from pandas.core.frame import DataFrame
-#Finished Jan 4th 2020
+
 def turnToDf(filePath: str):
     return pd.read_csv(filePath)
 
@@ -29,20 +26,33 @@ def colorPick (val: float, minVal: float, maxVal: float):
    
     return '#{:02x}{:02x}{:02x}'.format(red, green, blue)
 
-def mapDf(df: DataFrame, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float):
+def createDirectory(folderName: str): #Creates working directory within the user's home directory on Windows
+    BAJAFolder = os.path.join(os.environ['USERPROFILE'], folderName) #First parameter returns pathname of home directory
+    if not os.path.exists(BAJAFolder):
+        os.makedirs(BAJAFolder)
+
+def mapDf(df: DataFrame, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float, folderName: str):
+    
     outputName = '{}.html'.format(outName)
+    createDirectory(folderName)
+        
     minLat, minLon, maxLat, maxLon = min([x for x in df['Latitude'] if x != 0.0]), min([x for x in df['Longitude'] if x != 0.0]), max([x for x in df['Latitude'] if x != 0.0]), max([x for x in df['Longitude'] if x != 0.0])
     #Approximate location of the course
     mapPlot = gmplot.GoogleMapPlotter((minLat + (maxLat - minLat)/2), (minLon + (maxLon - minLon)/2), 18)
     for index, row in df.iterrows():
-        if (df.loc[index,"Latitude"] != 0.0 and df.loc[index, "Longitude"] != 0.0) : mapPlot.plot(df.loc[index:index+1, 'Latitude'], df.loc[index:index+1, 'Longitude'], color = colorPick(df.loc[index,variableToBeMeasured], minVal, maxVal), edge_width=7)
-    mapPlot.draw(outputName)
-    os.system(outputName)
+        if (df.loc[index,'Latitude'] != 0.0 and df.loc[index, 'Longitude'] != 0.0): 
+            mapPlot.plot(df.loc[index:index+1, 'Latitude'], df.loc[index:index+1, 'Longitude'], color = colorPick(df.loc[index,variableToBeMeasured], minVal, maxVal), edge_width=7)
     
-def turnToExcel(df: DataFrame, outName: str):
-    df.to_excel('{}.xlsx'.format(outName))
+    #Creates the html file in the current directory
+    mapPlot.draw(os.path.join(os.environ['USERPROFILE'], folderName, outputName))
+    
+    #Need the double quotes for os.system to behave properly. 
+    os.system('"' + os.path.join(folderName, outputName) + '"')
+    
+def turnToExcel(df: DataFrame, outName: str, folderName: str):
+    df.to_excel('{0}\{1}.xlsx'.format(folderName, outName))
 
-def processData(inName: str, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float):
+def processData(inName: str, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float, folderName: str = 'BAJA Plots'):
     df = turnToDf(inName)
-    mapDf(df, outName, variableToBeMeasured, minVal, maxVal)
-    turnToExcel(df, outName)
+    mapDf(df, outName, variableToBeMeasured, minVal, maxVal, folderName)
+    turnToExcel(df, outName, folderName)
