@@ -46,7 +46,7 @@ def mapDf(df: DataFrame, outName: str, variableToBeMeasured: str, minVal: float,
     #Creates the html file in the current directory
     mapPlot.draw(os.path.join(os.environ['USERPROFILE'], folderName, outputName))
     
-    #Need the double quotes for os.system to behave properly. 
+    #Opens the html file
     os.system('"' + os.path.join(folderName, outputName) + '"')
     
 def turnToExcel(df: DataFrame, outName: str, folderName: str):
