@@ -26,15 +26,16 @@ def colorPick (val: float, minVal: float, maxVal: float):
    
     return '#{:02x}{:02x}{:02x}'.format(red, green, blue)
 
-def createDirectory(folderName: str): #Creates working directory within the user's home directory on Windows
-    BAJAFolder = os.path.join(os.environ['USERPROFILE'], folderName) #First parameter returns pathname of home directory
+def createDirectory(folderName: str, childFolders: list): #Creates working directory within the user's home directory on Windows
+    BAJAFolder = os.path.join(os.environ['USERPROFILE'], folderName)
     if not os.path.exists(BAJAFolder):
-        os.makedirs(BAJAFolder)
+        for folder in childFolders:
+            os.makedirs(os.path.join(BAJAFolder, folder))
 
-def mapDf(df: DataFrame, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float, folderName: str):
+def mapDf(df: DataFrame, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float, folderName: str, childFolders: list):
     
     outputName = '{}.html'.format(outName)
-    createDirectory(folderName)
+    createDirectory(folderName, childFolders)
         
     minLat, minLon, maxLat, maxLon = min([x for x in df['Latitude'] if x != 0.0]), min([x for x in df['Longitude'] if x != 0.0]), max([x for x in df['Latitude'] if x != 0.0]), max([x for x in df['Longitude'] if x != 0.0])
     #Approximate location of the course
@@ -44,15 +45,15 @@ def mapDf(df: DataFrame, outName: str, variableToBeMeasured: str, minVal: float,
             mapPlot.plot(df.loc[index:index+1, 'Latitude'], df.loc[index:index+1, 'Longitude'], color = colorPick(df.loc[index,variableToBeMeasured], minVal, maxVal), edge_width=7)
     
     #Creates the html file in the current directory
-    mapPlot.draw(os.path.join(os.environ['USERPROFILE'], folderName, outputName))
+    mapPlot.draw(os.path.join(os.environ['USERPROFILE'], folderName, 'html', outputName))
     
     #Opens the html file
-    os.system('"' + os.path.join(folderName, outputName) + '"')
+    os.system('"' + os.path.join(folderName, 'html', outputName) + '"')
     
 def turnToExcel(df: DataFrame, outName: str, folderName: str):
-    df.to_excel('{0}\{1}.xlsx'.format(folderName, outName))
+    df.to_excel("{0}\\xlsx\\{1}.xlsx".format(folderName, outName))
 
-def processData(inName: str, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float, folderName: str = 'BAJA Plots'):
+def processData(inName: str, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float, folderName: str = 'BAJAPlots', childFolders: list = ['html', 'xlsx']):
     df = turnToDf(inName)
-    mapDf(df, outName, variableToBeMeasured, minVal, maxVal, folderName)
+    mapDf(df, outName, variableToBeMeasured, minVal, maxVal, folderName, childFolders)
     turnToExcel(df, outName, folderName)
