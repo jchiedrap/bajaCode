@@ -1,5 +1,5 @@
 import pandas as pd
-import gmplot, os, subprocess
+import gmplot, os
 from pandas.core.frame import DataFrame
 
 def turnToDf(filePath: str):
