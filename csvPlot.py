@@ -1,13 +1,13 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from datetime import time
-#Finished Jan 6th 2020
 def plotData(path: str, quantity: str):
 
     df = pd.read_csv(path) #Read the csv
-
-    timeArray = [time( hour = int(timestring[7:9]), minute = int(timestring[9:11]), second = int(timestring[11:13])) for timestring in [str(df.loc[index, 'DDMMYYYYHHMMSS']) for index, row in df.iterrows()]]
-   
+    
+    timeArray = [time( hour = int(timestring[3]), minute = int(timestring[4]), second = int(timestring[5]) ) 
+                 for timestring in [str(df.loc[index, 'DD-MM-YYYY-HH-MM-SS']).split('-') for index, row in df.iterrows()] ]
+    
     timeArray = pd.to_datetime(timeArray, format="%H:%M:%S")#Converting into pandas time format (with standard year, month, day)
     plt.xticks(rotation=30) #Rotate the x-axis labels 30 degrees so they don't overlap
     
@@ -16,4 +16,3 @@ def plotData(path: str, quantity: str):
     plt.xlabel('Time')
     plt.ylabel(f'{quantity}')
     plt.show()
-    
