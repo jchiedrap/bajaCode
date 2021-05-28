@@ -32,28 +32,77 @@ def createDirectory(folderName: str, childFolders: list): #Creates working direc
         for folder in childFolders:
             os.makedirs(os.path.join(BAJAFolder, folder))
 
-def mapDf(df: DataFrame, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float, folderName: str, childFolders: list):
+def createHTMLFile(mapPlot: gmplot.GoogleMapPlotter,folderName: str, outputName: str):
+    mapPlot.draw(os.path.join(os.environ['USERPROFILE'], folderName, 'html', outputName))
     
-    outputName = '{}.html'.format(outName)
-    createDirectory(folderName, childFolders)
-        
-    minLat, minLon, maxLat, maxLon = min([x for x in df['Latitude'] if x != 0.0]), min([x for x in df['Longitude'] if x != 0.0]), max([x for x in df['Latitude'] if x != 0.0]), max([x for x in df['Longitude'] if x != 0.0])
+def openHTMLFile(folderName: str, outputName: str):
+    os.system('"' + os.path.join(folderName, 'html', outputName) + '"')
+
+def splitCsvInDfIfDuplicateHeaders(filePath: str): #Make this create separate data frames instead of csv's
+    df = pd.read_csv(filePath)
+    dfList = []
+    #preLine is last line to iterate the csv from
+    #curLine is current line to iterate the csv to
+    #csvNumber is the current number of the csv generated, starting with 1
+    prevLine, curLine, csvNumber = 0, 0, 0
+    for index, row in df.iterrows():
+        curLine += 1  
+        if df.loc[index,"RPM"] == "RPM":
+            currDf = df.iloc[prevLine:curLine-1]#Skips over line where the repeat header was recognized
+            dfList.append(currDf)
+            prevLine = curLine
+    lastDf = df.iloc[prevLine:]
+    dfList.append(lastDf)
+    return dfList
+
+def mapDf(df: DataFrame, 
+          folderName: str, 
+          outName: str, 
+          variableToBeMeasured: str, 
+          minVal: float, 
+          maxVal: float,
+          fileNum: int = 1 
+         ):
+    if fileNum != 1:
+        outputName = '{}_{}.html'.format(outName, fileNum)
+    else:
+        outputName = '{}.html'.format(outName)
+    
+    minLat = min([float(x) for x in df['Latitude'] if float(x) != 0.0])
+    minLon = min([float(x) for x in df['Longitude'] if float(x) != 0.0])
+    maxLat = max([float(x) for x in df['Latitude'] if float(x) != 0.0])
+    maxLon = max([float(x) for x in df['Longitude'] if float(x) != 0.0])
+    
     #Approximate location of the course
     mapPlot = gmplot.GoogleMapPlotter((minLat + (maxLat - minLat)/2), (minLon + (maxLon - minLon)/2), 18)
     for index, row in df.iterrows():
-        if (df.loc[index,'Latitude'] != 0.0 and df.loc[index, 'Longitude'] != 0.0): 
-            mapPlot.plot(df.loc[index:index+1, 'Latitude'], df.loc[index:index+1, 'Longitude'], color = colorPick(df.loc[index,variableToBeMeasured], minVal, maxVal), edge_width=7)
+        if (float(df.loc[index,'Latitude']) != 0.0 and float(df.loc[index, 'Longitude']) != 0.0): 
+            mapPlot.plot(df.loc[index:index+1, 'Latitude'].astype(float), df.loc[index:index+1, 'Longitude'].astype(float), color = colorPick(float(df.loc[index,variableToBeMeasured]), minVal, maxVal), edge_width=7)
     
-    #Creates the html file in the current directory
-    mapPlot.draw(os.path.join(os.environ['USERPROFILE'], folderName, 'html', outputName))
+    createHTMLFile(mapPlot, folderName, outputName)
+    openHTMLFile(folderName, outputName)
     
-    #Opens the html file
-    os.system('"' + os.path.join(folderName, 'html', outputName) + '"')
     
-def turnToExcel(df: DataFrame, outName: str, folderName: str):
-    df.to_excel("{0}\\xlsx\\{1}.xlsx".format(folderName, outName))
+def turnToExcel(df: DataFrame, folderName: str, outName: str, fileNum: int = 1):
+    if fileNum != 1:
+        df.to_excel(os.path.join(os.environ['USERPROFILE'], folderName, 'xlsx', outName + '_' + str(fileNum) + '.xlsx'), 
+                index=False)
+    else:
+        df.to_excel(os.path.join(os.environ['USERPROFILE'], folderName, 'xlsx', outName + '.xlsx'), 
+                index=False)
 
-def processData(inName: str, outName: str, variableToBeMeasured: str, minVal: float, maxVal: float, folderName: str = 'BAJAPlots', childFolders: list = ['html', 'xlsx']):
-    df = turnToDf(inName)
-    mapDf(df, outName, variableToBeMeasured, minVal, maxVal, folderName, childFolders)
-    turnToExcel(df, outName, folderName)
+def processData(path: str, 
+                outName: str, 
+                variableToBeMeasured: str, 
+                minVal: float, maxVal: float, 
+                folderName: str = 'BAJAPlots', 
+                childFolders: list = ['html', 'xlsx']
+               ):
+    dfList = splitCsvInDfIfDuplicateHeaders(path)
+    createDirectory(folderName, childFolders)
+    
+    fileNum = 0
+    for dataFrame in dfList:
+        fileNum += 1
+        mapDf(dataFrame, folderName, outName, variableToBeMeasured, minVal, maxVal, fileNum)
+        turnToExcel(dataFrame, folderName, outName, fileNum)
