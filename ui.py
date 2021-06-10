@@ -1,4 +1,6 @@
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -49,12 +51,12 @@ class Ui_MainWindow(object):
         self.plotMapAreaTab = QtWidgets.QTabWidget(self.centralwidget)
         self.plotMapAreaTab.setGeometry(QtCore.QRect(210, 60, 361, 321))
         self.plotMapAreaTab.setObjectName("plotMapAreaTab")
-        self.tab = QtWidgets.QWidget()
-        self.tab.setObjectName("tab")
-        self.plotMapAreaTab.addTab(self.tab, "")
-        self.tab_2 = QtWidgets.QWidget()
-        self.tab_2.setObjectName("tab_2")
-        self.plotMapAreaTab.addTab(self.tab_2, "")
+        self.routeTab = QtWidgets.QWidget()
+        self.routeTab.setObjectName("routeTab")
+        self.plotMapAreaTab.addTab(self.routeTab, "")
+        self.graphTab = QtWidgets.QWidget()
+        self.graphTab.setObjectName("graphTab")
+        self.plotMapAreaTab.addTab(self.graphTab, "")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 586, 26))
@@ -82,7 +84,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuFile.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.plotMapAreaTab.setCurrentIndex(0)
+        self.plotMapAreaTab.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -106,8 +108,8 @@ class Ui_MainWindow(object):
         self.combo_X.setItemText(4, _translate("MainWindow", "Latitude"))
         self.combo_X.setItemText(5, _translate("MainWindow", "Longitude"))
         self.excelButton.setText(_translate("MainWindow", "Create Excel File"))
-        self.plotMapAreaTab.setTabText(self.plotMapAreaTab.indexOf(self.tab), _translate("MainWindow", "Tab 1"))
-        self.plotMapAreaTab.setTabText(self.plotMapAreaTab.indexOf(self.tab_2), _translate("MainWindow", "Tab 2"))
+        self.plotMapAreaTab.setTabText(self.plotMapAreaTab.indexOf(self.routeTab), _translate("MainWindow", "Route"))
+        self.plotMapAreaTab.setTabText(self.plotMapAreaTab.indexOf(self.graphTab), _translate("MainWindow", "Graph"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.actionOpen.setText(_translate("MainWindow", "Open"))
         self.actionSave.setText(_translate("MainWindow", "Save"))
@@ -115,6 +117,7 @@ class Ui_MainWindow(object):
         self.actionImport_csv_file.setText(_translate("MainWindow", "Import CSV File"))
         self.actionExport_Excel_File.setText(_translate("MainWindow", "Export Excel File"))
         self.actionSplit_CSV_File.setText(_translate("MainWindow", "Split CSV File"))
+
 
 #Logic Class
 import pandas as pd
@@ -125,21 +128,27 @@ from PyQt5.QtWidgets import QFileDialog
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         QtWidgets.QMainWindow.__init__(self, parent=parent)
-
+        dataframes = []
         self.setupUi(self)
         self.setWindowTitle("BAJA Run Data Analysis")
         self.createDirectory('BAJAPlots', ['html', 'xlsx', 'csv'])
-        self.routeButton.clicked.connect(self.clicker)
-        self.actionImport_csv_file.triggered.connect(self.openCSV)
+        self.routeButton.clicked.connect(self.plotRoute)
+        self.actionImport_csv_file.triggered.connect(self.importCSV)
     
     def clicker(self):
         print('clicked lol')
-        
-    def turnToDf(filePath: str):
+    
+    def createDirectory(self, folderName: str, childFolders: list): #Creates working directory within the user's home directory on Windows
+        BAJAFolder = os.path.join(os.environ['USERPROFILE'], folderName)
+        if not os.path.exists(BAJAFolder):
+            for folder in childFolders:
+                os.makedirs(os.path.join(BAJAFolder, folder))
+                
+    def turnToDf(self, filePath: str):
         return pd.read_csv(filePath)
-    ##Take a txt, open several tabs
-    def splitCsvInDfIfDuplicateHeaders(filePath: str): #Make this create separate data frames instead of csv's
-        df = turnToDf(filePath)
+    
+    def splitCsvInDfIfDuplicateHeaders(self, filePath: str): #Make this create separate data frames instead of csv's
+        df = self.turnToDf(filePath)
         dfList = []
         #preLine is last line to iterate the csv from
         #curLine is current line to iterate the csv to
@@ -154,21 +163,17 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         lastDf = df.iloc[prevLine:]
         dfList.append(lastDf)
         return dfList
-
-
-    def createDirectory(self, folderName: str, childFolders: list): #Creates working directory within the user's home directory on Windows
-        BAJAFolder = os.path.join(os.environ['USERPROFILE'], folderName)
-        if not os.path.exists(BAJAFolder):
-            for folder in childFolders:
-                os.makedirs(os.path.join(BAJAFolder, folder))
                 
-    def openCSV(self):
-        file = QFileDialog.getOpenFileName(self,
+    def importCSV(self):
+        file, _filter = QFileDialog.getOpenFileName(self,
                                            'Importing csv file', 
                                            '',
                                            "All Files (*);;Text Files (*.txt);;Excel Files (*.xlsx);;csv Files (*.csv)", 
                                            options=QFileDialog.Options())
-        print(file)
+        self.dataframes = self.splitCsvInDfIfDuplicateHeaders(file)
+        
+    def plotRoute(self):
+        
         
     def colorPick (val: float, minVal: float, maxVal: float):
         if val >= maxVal or val <= minVal: # Bounds are exclusive
@@ -217,8 +222,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         
         createHTMLFile(mapPlot, folderName, outputName)
         openHTMLFile(folderName, outputName)
-
-
 
 if __name__ == "__main__":
     import sys
