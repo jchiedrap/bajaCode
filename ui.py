@@ -135,9 +135,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.routeButton.clicked.connect(self.plotRoute)
         self.actionImport_csv_file.triggered.connect(self.importCSV)
     
-    def clicker(self):
-        print('clicked lol')
-    
     def createDirectory(self, folderName: str, childFolders: list): #Creates working directory within the user's home directory on Windows
         BAJAFolder = os.path.join(os.environ['USERPROFILE'], folderName)
         if not os.path.exists(BAJAFolder):
@@ -152,7 +149,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         dfList = []
         #preLine is last line to iterate the csv from
         #curLine is current line to iterate the csv to
-        #csvNumber is the current number of the csv generated, starting with 1
         prevLine, curLine = 0, 0
         for index, row in df.iterrows():
             curLine += 1  
@@ -173,7 +169,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.dataframes = self.splitCsvInDfIfDuplicateHeaders(file)
         
     def plotRoute(self):
-        
+        print('assume the route is showing up properly lol')
         
     def colorPick (val: float, minVal: float, maxVal: float):
         if val >= maxVal or val <= minVal: # Bounds are exclusive
