@@ -2,8 +2,6 @@ import pandas as pd
 import gmplot, os
 import sys
 from pandas.core.frame import DataFrame
-from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets
-from PyQt5.QtWidgets import QFileDialog, QTextBrowser
 from BAJA_Data_Analysis_UI import Ui_MainWindow
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -20,7 +18,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.dataframeCount = 0
         self.currentFileName = ''
         self.setWindowTitle("BAJA Run Data Analysis")
-        self.createDirectory(self.folderName, self.childFolders)
+        self.createDirectoryinHomeDirectory(self.folderName, self.childFolders)
         self.routeButton.clicked.connect(self.plotRoute)
         self.leftDataframeSelector.clicked.connect(self.leftSelect)
         self.rightDataframeSelector.clicked.connect(self.rightSelect)
@@ -50,25 +48,26 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.fileLabel.setText('FileName: \"{}\"'.format(self.currentFileName))
         except FileNotFoundError:
             self.errorLabel.setText("Please Select a Dataframe")
+            self.fileLabel.setText('')
         except pd.errors.ParserError:
             self.errorLabel.setText("Please Select a Dataframe")
-            
-        
+            self.fileLabel.setText('')
+
     def exportExcel(self):
         name, _filter = QFileDialog.getSaveFileName(self,
                                            'Export excel file', 
                                            self.currentFileName,
-                                           "Excel Files (*.xlsx)", 
+                                           "Excel Files (*.xlsx);;csv Files (*.csv)", 
                                            options=QFileDialog.Options())
         try:
             self.dataframes[self.dataframeNum].to_excel(os.path.join(os.environ['USERPROFILE'], self.folderName, 'xlsx', name + '.xlsx'), 
-                index=False)
+                                                        index=False)
             self.errorLabel.setText("")
         except ValueError: #Usually occurs due to user saving with no name
             pass
         except IndexError:
             self.errorLabel.setText("Please Select a Dataframe")
-        
+
     def exportHTML(self):
         name, _filter = QFileDialog.getSaveFileName(self,
                                            'Export html file', 
@@ -86,11 +85,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                        )
             self.errorLabel.setText("")
         except ValueError:
-            #Usually occurs if user does not enter proper min/max values
             self.errorLabel.setText("Please Enter Valid Bounds")
         except IndexError:
             self.errorLabel.setText("Please Select a Dataframe")
-        
         
     def plotRoute(self):
         try: 
@@ -113,16 +110,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     
     def loadPage(self):
-        #map.html works for some reason
-        with open("C:/Users/Tahmeed/BAJAPlots/html/tmp.html", 'r') as f:
+        with open(os.path.join(os.environ['USERPROFILE'], self.folderName, 'html', 'tmp.html'), 'r') as f:
             html = f.read()
-            with open("C:/Users/Tahmeed/BAJA UI Test Files/test.txt", 'w+') as file:
-                file.write(html)
-                self.webView.setHtml(html)
-            
+            self.webView.setHtml(html)
             f.close()
 
-    def createDirectory(self, folderName: str, childFolders: list): #Creates working directory within the user's home directory on Windows
+    def createDirectoryinHomeDirectory(self, folderName: str, childFolders: list):
         BAJAFolder = os.path.join(os.environ['USERPROFILE'], folderName)
         if not os.path.exists(BAJAFolder):
             for folder in childFolders:
@@ -131,11 +124,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def turnToDf(self, filePath: str):
         return pd.read_csv(filePath)
     
-    def splitCsvInDfIfDuplicateHeaders(self, filePath: str): #Make this create separate data frames instead of csv's
+    def splitCsvInDfIfDuplicateHeaders(self, filePath: str): 
         df = self.turnToDf(filePath)
         dfList = []
-        prevLine = 0#last line to iterate the csv from
-        curLine = 0#current line to iterate the csv to
+        prevLine = 0 #last line to iterate the csv from
+        curLine = 0 #current line to iterate the csv to
         for index, row in df.iterrows():
             curLine += 1  
             if df.loc[index,"RPM"] == "RPM":
@@ -172,33 +165,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                           18, 
                                           apikey = self.apikey,
                                           map_type='hybrid')
-        pathList = []
-        colorList = []
         for index, row in df.iterrows():
             if (float(df.loc[index,'Latitude']) != 0.0 and float(df.loc[index, 'Longitude']) != 0.0):
                 mapPlot.plot(df.loc[index:index+1, 'Latitude'].astype(float), df.loc[index:index+1, 'Longitude'].astype(float), color = self.colorPick(float(df.loc[index,variableToBeMeasured]), minVal, maxVal), edge_width=7)
-                
-                #pathList.append( (float(df.loc[index,'Latitude']), float(df.loc[index, 'Longitude'])) )
-                #colorList.append( self.colorPick(float(df.loc[index,variableToBeMeasured]), minVal, maxVal) )
-        
-        #Without the asterisk, the coordinates would be passed as a single argument instead of being unpacked as two
-        #With asterisk, you get two tuples, one with all the longs and one with all the lats
-        a = str((color) for color in colorList)
-        
-        """
-        mapPlot.heatmap(*path, 
-                        opacity = 0.5, 
-                        radius=10, 
-                        #figure out the weights
-                        gradient=[(0, 0, 255, 0), (0, 255, 0, 0.5), (255, 0, 0, 1)] 
-                        )
-"""
         self.createHTMLFile(mapPlot, folderName, outputName)
-        
-    #Temporary Function
-    def openHTMLPlot(self, outName: str, fileNum: int = 0):
-        outputName = '{}.html'.format(outName)
-        os.system(os.path.join(os.environ['USERPROFILE'], self.folderName, 'html', outputName))
         
         
     def colorPick (self, val: float, minVal: float, maxVal: float):
