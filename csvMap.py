@@ -1,6 +1,8 @@
 import pandas as pd
 import gmplot, os
 import sys
+from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets
+from PyQt5.QtWidgets import QFileDialog, QTextBrowser
 from pandas.core.frame import DataFrame
 from BAJA_Data_Analysis_UI import Ui_MainWindow
 
