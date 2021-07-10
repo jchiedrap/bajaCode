@@ -1,9 +1,10 @@
+import gmplot, sys, os
 import pandas as pd
-import gmplot, os
-import sys
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from pandas.core.frame import DataFrame
 from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets
 from PyQt5.QtWidgets import QFileDialog, QTextBrowser
-from pandas.core.frame import DataFrame
 from BAJA_Data_Analysis_UI import Ui_MainWindow
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -50,10 +51,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.fileLabel.setText('FileName: \"{}\"'.format(self.currentFileName))
         except FileNotFoundError:
             self.errorLabel.setText("Please Select a Dataframe")
-            self.fileLabel.setText('')
+            self.fileLabel.setText('FileName: None')
         except pd.errors.ParserError:
             self.errorLabel.setText("Please Select a Dataframe")
-            self.fileLabel.setText('')
+            self.fileLabel.setText('FileName: None')
 
     def exportExcel(self):
         name, _filter = QFileDialog.getSaveFileName(self,
@@ -135,13 +136,24 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             curLine += 1  
             if df.loc[index,"RPM"] == "RPM":
                 currDf = df.iloc[prevLine:curLine-1]#Skips over line where the repeat header was recognized
+                currDf = self.shortenDf(currDf)
                 dfList.append(currDf)
                 prevLine = curLine
         lastDf = df.iloc[prevLine:]
+        lastDf = self.shortenDf(lastDf)
         dfList.append(lastDf)
         self.dataframeCount = len(dfList)
         return dfList
-        
+    
+    def shortenDf(self, df: DataFrame):
+        n = 1
+        ideal_length = 1000
+        if len(df) > ideal_length:
+            n = int(len(df)/ideal_length + (len(df) % ideal_length>0))
+        df = df.iloc[::n]
+        df.index= range(len(df)) #Reassigns indexes
+        return df
+    
     def createHTMLFile(self, mapPlot: gmplot.GoogleMapPlotter,folderName: str, outputName: str):
         mapPlot.draw(os.path.join(os.environ['USERPROFILE'], folderName, 'html', outputName))
         
@@ -167,7 +179,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                           18, 
                                           apikey = self.apikey,
                                           map_type='hybrid')
-        for index, row in df.iterrows():
+        for index,row in df.iterrows():
             if (float(df.loc[index,'Latitude']) != 0.0 and float(df.loc[index, 'Longitude']) != 0.0):
                 mapPlot.plot(df.loc[index:index+1, 'Latitude'].astype(float), df.loc[index:index+1, 'Longitude'].astype(float), color = self.colorPick(float(df.loc[index,variableToBeMeasured]), minVal, maxVal), edge_width=7)
         self.createHTMLFile(mapPlot, folderName, outputName)
